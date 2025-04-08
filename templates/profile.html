@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Tech Blog{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto glass-effect p-8 rounded-xl relative overflow-hidden min-h-[60vh] card-3d">
+    <div class="absolute top-0 left-0 w-full h-full">
+        <img src="https://image.pollinations.ai/prompt/tech_profile_network?width=800&height=600&nologo=true" 
+             class="w-full h-full object-cover opacity-20">
+    </div>
+    
+    <!-- 3D floating elements -->
+    <div class="absolute top-10 right-10 w-16 h-16 bg-blue-500 rounded-full opacity-20 blur-xl animate-float"></div>
+    <div class="absolute bottom-10 left-10 w-24 h-24 bg-purple-500 rounded-full opacity-20 blur-xl animate-float" style="animation-delay: 1s;"></div>
+    <div class="absolute top-1/2 left-1/4 w-12 h-12 bg-cyan-500 rounded-full opacity-20 blur-xl animate-float" style="animation-delay: 2s;"></div>
+    
+    <div class="relative z-10">
+        <div class="flex items-center mb-8">
+            <div class="relative">
+                <img id="user-avatar" 
+                     alt="Profile" 
+                     class="w-24 h-24 rounded-full glass-effect p-1 mr-6 hover-scale">
+                <!-- Removed the static image source -->
+            </div>
+            <h1 class="text-3xl font-bold gradient-text glow">Profile</h1>
+        </div>
+        
+        <div id="profile-info" class="space-y-6">
+            <div class="glass-effect p-4 rounded-lg hover-scale">
+                <label class="text-gray-400">Username</label>
+                <p id="profile-username" class="text-xl font-semibold text-blue-400"></p>
+            </div>
+            
+            <div class="glass-effect p-4 rounded-lg hover-scale">
+                <label class="text-gray-400">Email</label>
+                <p id="profile-email" class="text-xl text-gray-300"></p>
+            </div>
+            
+            <div class="glass-effect p-4 rounded-lg hover-scale mt-8">
+                <h3 class="text-lg font-semibold text-blue-400 mb-2">Activity Stats</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center">
+                        <div id="article-count" class="text-2xl font-bold text-purple-400 animate-pulse">0</div>
+                        <div class="text-gray-400">Articles</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-cyan-400 animate-pulse">0</div>
+                        <div class="text-gray-400">Comments</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
+    
+    if (!user || !token) {
+        window.location.href = '/login';
+        return;
+    }
+    
+    // Generate a unique avatar based on username or email
+    const avatarSeed = user.username || user.email || 'user';
+    // Create a unique prompt for each user by combining their username with different avatar styles
+    const avatarStyles = [
+        'cyberpunk_avatar',
+        'futuristic_tech_avatar',
+        'digital_human_avatar',
+        'neon_profile_avatar',
+        'sci_fi_character_avatar',
+        'tech_hacker_avatar',
+        'virtual_reality_avatar'
+    ];
+    
+    // Use the username to consistently select the same style for a user
+    const styleIndex = Math.abs(avatarSeed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % avatarStyles.length;
+    const avatarStyle = avatarStyles[styleIndex];
+    
+    // Set the avatar image with the unique style and the username as seed
+    document.getElementById('user-avatar').src = 
+        `https://image.pollinations.ai/prompt/${avatarStyle}_${avatarSeed}?width=200&height=200&nologo=true`;
+    
+    // Display user info
+    document.getElementById('profile-username').textContent = user.username || '';
+    document.getElementById('profile-email').textContent = user.email || '';
+    
+    // Fetch user's articles
+    try {
+        const response = await fetch('/api/articles', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch articles');
+        }
+        
+        const data = await response.json();
+        const articles = data.articles || [];
+        
+        // Filter articles by the current user
+        const userArticles = articles.filter(article => 
+            article.author_id === user._id || 
+            (article.author && article.author._id === user._id)
+        );
+        
+        // Update the article count
+        document.getElementById('article-count').textContent = userArticles.length;
+        
+        // Remove animation once we have the real count
+        document.getElementById('article-count').classList.remove('animate-pulse');
+        
+        console.log(`Found ${userArticles.length} articles for user ${user.username}`);
+    } catch (error) {
+        console.error('Error fetching user articles:', error);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Article - Tech Blog{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<link href="/static/css/quill-dark.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto glass-effect p-8 rounded-xl">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-400">Edit Article</h1>
+        <a href="/articles/{{ article_id }}" class="glass-effect px-6 py-3 rounded-lg text-blue-400 hover:text-blue-300 transition-all">
+            Cancel
+        </a>
+    </div>
+
+    <div id="loading" class="text-center py-12">
+        <p class="text-gray-400">Loading article...</p>
+    </div>
+
+    <form id="edit-article-form" class="hidden">
+        <div class="mb-6">
+            <label for="title" class="block text-gray-300 mb-2">Title</label>
+            <input type="text" id="title" name="title" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white" required>
+        </div>
+
+        <div class="mb-6">
+            <label for="summary" class="block text-gray-300 mb-2">Summary</label>
+            <textarea id="summary" name="summary" rows="2" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"></textarea>
+        </div>
+
+        <div class="mb-6">
+            <label for="thumbnail" class="block text-gray-300 mb-2">Thumbnail Image</label>
+            <div class="flex items-center space-x-4">
+                <div class="flex-1">
+                    <input type="file" id="thumbnail" name="thumbnail" accept="image/*" 
+                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white">
+                </div>
+                <div class="flex-1">
+                    <input type="url" id="thumbnail_url" name="thumbnail_url" 
+                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white" 
+                        placeholder="Or enter image URL">
+                </div>
+            </div>
+            <div id="thumbnail-preview" class="mt-3 hidden">
+                <img id="thumbnail-preview-img" src="" alt="Thumbnail Preview" class="h-40 rounded-lg">
+            </div>
+            <p class="text-gray-500 text-sm mt-1">Leave empty to keep current thumbnail</p>
+        </div>
+
+        <div class="mb-6">
+            <label for="content" class="block text-gray-300 mb-2">Content</label>
+            <div id="editor" class="bg-gray-800 border border-gray-700 rounded-lg" style="height: 300px;"></div>
+            <input type="hidden" id="content" name="content">
+        </div>
+
+        <div class="flex justify-end">
+            <button type="submit" class="glass-effect px-6 py-3 rounded-lg text-blue-400 hover:text-blue-300 transition-all">
+                Update Article
+            </button>
+        </div>
+    </form>
+
+    <div id="error" class="hidden text-center py-12">
+        <p class="text-red-400">Error loading article. It may have been removed or you don't have permission to edit it.</p>
+        <a href="/articles" class="mt-4 inline-block px-6 py-3 glass-effect rounded-lg text-blue-400 hover:text-blue-300 transition-all">
+            Back to Articles
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    const articleId = '{{ article_id }}';
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+    
+    // Initialize Quill editor
+    const quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'image', 'code-block'],
+                ['clean']
+            ]
+        },
+        placeholder: 'Write your article content here...'
+    });
+    
+    // Thumbnail preview functionality
+    const thumbnailInput = document.getElementById('thumbnail');
+    const thumbnailUrlInput = document.getElementById('thumbnail_url');
+    const thumbnailPreview = document.getElementById('thumbnail-preview');
+    const thumbnailPreviewImg = document.getElementById('thumbnail-preview-img');
+    
+    // Show preview when file is selected
+    thumbnailInput.addEventListener('change', async (e) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            thumbnailPreviewImg.src = URL.createObjectURL(file);
+            thumbnailPreview.classList.remove('hidden');
+            thumbnailUrlInput.value = ''; // Clear URL input when file is selected
+        }
+    });
+    
+    // Show preview when URL is entered
+    thumbnailUrlInput.addEventListener('input', (e) => {
+        if (e.target.value) {
+            thumbnailPreviewImg.src = e.target.value;
+            thumbnailPreview.classList.remove('hidden');
+            thumbnailInput.value = ''; // Clear file input when URL is entered
+        } else {
+            thumbnailPreview.classList.add('hidden');
+        }
+    });
+    
+    try {
+        // Fetch article data
+        const response = await fetch(`/api/articles/${articleId}`);
+        
+        if (!response.ok) {
+            throw new Error('Article not found');
+        }
+        
+        const data = await response.json();
+        const article = data.article;
+        
+        // Check if current user is the author
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!currentUser || article.author_id !== currentUser._id) {
+            throw new Error('You do not have permission to edit this article');
+        }
+        
+        // Populate form with article data
+        document.getElementById('title').value = article.title;
+        document.getElementById('summary').value = article.summary || '';
+        document.getElementById('thumbnail_url').value = article.thumbnail_url || '';
+        
+        // Show thumbnail preview if available
+        if (article.thumbnail_url) {
+            thumbnailPreviewImg.src = article.thumbnail_url;
+            thumbnailPreview.classList.remove('hidden');
+        }
+        
+        // Set Quill content
+        quill.root.innerHTML = article.content;
+        
+        // Show form, hide loading
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('edit-article-form').classList.remove('hidden');
+        
+        // Handle form submission
+        document.getElementById('edit-article-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Get content from Quill editor
+            const content = quill.root.innerHTML;
+            document.getElementById('content').value = content;
+            
+            let thumbnailUrl = document.getElementById('thumbnail_url').value;
+            
+            try {
+                // Upload thumbnail if file is selected
+                if (thumbnailInput.files && thumbnailInput.files[0]) {
+                    const formData = new FormData();
+                    formData.append('image', thumbnailInput.files[0]);
+                    
+                    const uploadResponse = await fetch('/api/articles/upload-image', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                    });
+                    
+                    if (!uploadResponse.ok) {
+                        const errorData = await uploadResponse.json();
+                        throw new Error(errorData.message || 'Failed to upload thumbnail');
+                    }
+                    
+                    const uploadData = await uploadResponse.json();
+                    thumbnailUrl = uploadData.url;
+                }
+                
+                const response = await fetch(`/api/articles/${articleId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        title: document.getElementById('title').value,
+                        summary: document.getElementById('summary').value,
+                        content: content,
+                        thumbnail_url: thumbnailUrl || article.thumbnail_url
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to update article');
+                }
+                
+                // Redirect to article page after successful update
+                window.location.href = `/articles/${articleId}`;
+                
+            } catch (error) {
+                console.error('Error updating article:', error);
+                alert(`Error: ${error.message}`);
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error loading article:', error);
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error').classList.remove('hidden');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Tech Blog{% endblock %}
+
+{% block head %}
+{{ super() }}
+<style>
+    .admin-badge {
+        background-color: rgba(220, 38, 38, 0.2);
+        color: #ef4444;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-badge.published {
+        background-color: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+    
+    .status-badge.draft {
+        background-color: rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+    }
+    
+    .article-row:hover {
+        background-color: rgba(55, 65, 81, 0.5);
+    }
+    
+    .action-button {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        transition: all 0.2s;
+    }
+    
+    .edit-button {
+        color: #3b82f6;
+    }
+    
+    .edit-button:hover {
+        background-color: rgba(59, 130, 246, 0.2);
+    }
+    
+    .delete-button {
+        color: #ef4444;
+    }
+    
+    .delete-button:hover {
+        background-color: rgba(239, 68, 68, 0.2);
+    }
+    
+    .view-button {
+        color: #10b981;
+    }
+    
+    .view-button:hover {
+        background-color: rgba(16, 185, 129, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-400">Admin Dashboard</h1>
+        <div class="flex space-x-4">
+            <button id="refreshBtn" class="glass-effect px-4 py-2 rounded-lg text-blue-400 hover:text-blue-300 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                </svg>
+                Refresh
+            </button>
+            <a href="/articles/new" class="glass-effect px-4 py-2 rounded-lg text-green-400 hover:text-green-300 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                New Article
+            </a>
+            <a href="/articles" class="glass-effect px-4 py-2 rounded-lg text-gray-400 hover:text-gray-300 transition-all">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10.293 15.707a1 1 0 010-1.414L14.586 10l-4.293-4.293a1 1 0 111.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    <path fill-rule="evenodd" d="M4.293 15.707a1 1 0 010-1.414L8.586 10 4.293 5.707a1 1 0 011.414-1.414l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                Public View
+            </a>
+        </div>
+    </div>
+    
+    <!-- Search and filter -->
+    <div class="glass-effect p-4 rounded-lg mb-6">
+        <div class="flex flex-wrap gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <input type="text" id="search" placeholder="Search articles..." 
+                    class="w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+            </div>
+            <div class="flex space-x-2">
+                <select id="authorFilter" class="p-2 bg-gray-800 border border-gray-700 rounded-lg text-white">
+                    <option value="">All Authors</option>
+                </select>
+                <button id="clearFilters" class="px-3 py-2 glass-effect rounded-lg text-gray-400 hover:text-gray-300 transition-all">
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Articles table -->
+    <div class="glass-effect rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="bg-gray-800 text-gray-400 text-left">
+                        <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider">Title</th>
+                        <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider">Author</th>
+                        <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-xs font-medium uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="articles-table-body" class="divide-y divide-gray-700">
+                    <!-- Articles will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Loading state -->
+        <div id="loading" class="text-center py-12">
+            <p class="text-gray-400">Loading articles...</p>
+        </div>
+        
+        <!-- Empty state -->
+        <div id="empty" class="hidden text-center py-12">
+            <p class="text-gray-400">No articles found.</p>
+        </div>
+        
+        <!-- Error state -->
+        <div id="error" class="hidden text-center py-12">
+            <p class="text-red-400">Error loading articles. Please try again later.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="glass-effect p-8 rounded-xl max-w-md w-full">
+        <h2 class="text-2xl font-bold text-red-400 mb-4">Delete Article</h2>
+        <p class="text-gray-300 mb-6">Are you sure you want to delete this article? This action cannot be undone.</p>
+        <div class="flex justify-end space-x-4">
+            <button id="cancel-delete" class="px-4 py-2 glass-effect rounded-lg text-gray-300 hover:text-white transition-all">
+                Cancel
+            </button>
+            <button id="confirm-delete" class="px-4 py-2 glass-effect rounded-lg text-red-400 hover:text-red-300 transition-all">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check if user is admin
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
+    
+    if (!token || !user || !user.is_admin) {
+        window.location.href = '/';
+        return;
+    }
+    
+    // Initialize variables
+    let articles = [];
+    let filteredArticles = [];
+    let authors = new Set();
+    
+    // DOM elements
+    const tableBody = document.getElementById('articles-table-body');
+    const loadingEl = document.getElementById('loading');
+    const emptyEl = document.getElementById('empty');
+    const errorEl = document.getElementById('error');
+    const searchInput = document.getElementById('search');
+    const authorFilter = document.getElementById('authorFilter');
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const deleteModal = document.getElementById('delete-modal');
+    const cancelDeleteBtn = document.getElementById('cancel-delete');
+    const confirmDeleteBtn = document.getElementById('confirm-delete');
+    let articleToDelete = null;
+    
+    // Load articles
+    await loadArticles();
+    
+    // Event listeners
+    searchInput.addEventListener('input', filterArticles);
+    authorFilter.addEventListener('change', filterArticles);
+    clearFiltersBtn.addEventListener('click', clearFilters);
+    refreshBtn.addEventListener('click', loadArticles);
+    cancelDeleteBtn.addEventListener('click', () => {
+        deleteModal.classList.add('hidden');
+        articleToDelete = null;
+    });
+    confirmDeleteBtn.addEventListener('click', confirmDelete);
+    
+    // Functions
+    async function loadArticles() {
+        try {
+            // Show loading
+            tableBody.innerHTML = '';
+            loadingEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            errorEl.classList.add('hidden');
+            
+            // Fetch articles
+            const response = await fetch('/api/articles', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to load articles');
+            }
+            
+            const data = await response.json();
+            articles = data.articles || [];
+            
+            // Collect authors for filter
+            authors = new Set();
+            articles.forEach(article => {
+                if (article.author_name) {
+                    authors.add(article.author_name);
+                }
+            });
+            
+            // Populate author filter
+            authorFilter.innerHTML = '<option value="">All Authors</option>';
+            Array.from(authors).sort().forEach(author => {
+                const option = document.createElement('option');
+                option.value = author;
+                option.textContent = author;
+                authorFilter.appendChild(option);
+            });
+            
+            // Apply filters
+            filterArticles();
+            
+        } catch (error) {
+            console.error('Error loading articles:', error);
+            loadingEl.classList.add('hidden');
+            errorEl.classList.remove('hidden');
+        }
+    }
+    
+    function filterArticles() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const authorName = authorFilter.value;
+        
+        filteredArticles = articles.filter(article => {
+            const titleMatch = article.title && article.title.toLowerCase().includes(searchTerm);
+            const summaryMatch = article.summary && article.summary.toLowerCase().includes(searchTerm);
+            const authorMatch = !authorName || (article.author_name === authorName);
+            
+            return (titleMatch || summaryMatch) && authorMatch;
+        });
+        
+        renderArticles();
+    }
+    
+    function renderArticles() {
+        loadingEl.classList.add('hidden');
+        
+        if (filteredArticles.length === 0) {
+            emptyEl.classList.remove('hidden');
+            return;
+        }
+        
+        emptyEl.classList.add('hidden');
+        tableBody.innerHTML = '';
+        
+        filteredArticles.forEach(article => {
+            // Make sure we're using the string ID for the article
+            const articleId = typeof article._id === 'string' 
+                ? article._id 
+                : (article._id.$oid || String(article._id));
+                
+            const row = document.createElement('tr');
+            row.className = 'border-b border-gray-700';
+            row.innerHTML = `
+                <td class="py-3 px-4">${article.title}</td>
+                <td class="py-3 px-4">${article.author_name || 'Unknown'}</td>
+                <td class="py-3 px-4">${new Date(article.created_at).toLocaleDateString()}</td>
+                <td class="py-3 px-4 text-right">
+                    <div class="flex justify-end space-x-2">
+                        <a href="/articles/${articleId}" class="text-blue-400 hover:text-blue-300">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </a>
+                        <a href="/articles/edit/${articleId}" class="text-green-400 hover:text-green-300">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+                            </svg>
+                        </a>
+                        <button class="delete-article-btn text-red-400 hover:text-red-300" data-id="${articleId}">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+        
+        // Add event listeners to delete buttons
+        document.querySelectorAll('.delete-article-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                showDeleteModal(id);
+            });
+        });
+    }
+    
+    function clearFilters() {
+        searchInput.value = '';
+        authorFilter.value = '';
+        filterArticles();
+    }
+    
+    function showDeleteModal(articleId) {
+        // Make sure articleId is a string
+        articleToDelete = String(articleId);
+        console.log('Article to delete (showDeleteModal):', articleToDelete);
+        deleteModal.classList.remove('hidden');
+    }
+    
+    async function confirmDelete() {
+        if (!articleToDelete) return;
+        
+        try {
+            // Debug log to check the article ID
+            console.log('Deleting article with ID:', articleToDelete);
+            
+            const response = await fetch(`/api/articles/${articleToDelete}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to delete article');
+            }
+            
+            // Hide modal and reload articles
+            deleteModal.classList.add('hidden');
+            await loadArticles();
+            
+        } catch (error) {
+            console.error('Error deleting article:', error);
+            alert('Failed to delete article. Please try again.');
+        } finally {
+            articleToDelete = null;
+        }
+    }
+});
+</script>
+{% endblock %}

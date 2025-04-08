@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Create Article - Tech Blog{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<link href="/static/css/quill-dark.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/atom-one-dark.min.css" rel="stylesheet">
+<script>
+// Initialize highlight.js
+hljs.configure({
+    languages: ['javascript', 'html', 'css', 'python', 'java', 'c', 'cpp', 'csharp', 'php']
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto glass-effect p-8 rounded-xl relative overflow-hidden">
+    <h1 class="text-3xl font-bold text-blue-400 mb-8">Create New Article</h1>
+    
+    <form id="create-article-form" class="space-y-6">
+        <div>
+            <label for="title" class="block text-gray-300 mb-2">Title</label>
+            <input type="text" id="title" name="title" required 
+                class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white">
+        </div>
+        
+        <div>
+            <label for="summary" class="block text-gray-300 mb-2">Summary</label>
+            <textarea id="summary" name="summary" rows="2" 
+                class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"></textarea>
+        </div>
+        
+        <div class="mb-6">
+            <label for="thumbnail" class="block text-gray-300 mb-2">Thumbnail Image</label>
+            <div class="flex items-center space-x-4">
+                <div class="flex-1">
+                    <input type="file" id="thumbnail" name="thumbnail" accept="image/*" 
+                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white">
+                </div>
+                <div class="flex-1">
+                    <input type="url" id="thumbnail_url" name="thumbnail_url" 
+                        class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white" 
+                        placeholder="Or enter image URL">
+                </div>
+            </div>
+            <div id="thumbnail-preview" class="mt-3 hidden">
+                <img id="thumbnail-preview-img" src="" alt="Thumbnail Preview" class="h-40 rounded-lg">
+            </div>
+        </div>
+        
+        <div>
+            <label for="editor" class="block text-gray-300 mb-2">Content</label>
+            <div id="editor" class="h-64 bg-gray-800 rounded-lg"></div>
+            <input type="hidden" id="content" name="content">
+        </div>
+        
+        <div class="flex justify-end">
+            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                Publish Article
+            </button>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+        window.location.href = '/login';
+        return;
+    }
+    
+    // Initialize Quill editor with syntax highlighting
+    const quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: {
+            syntax: {
+                highlight: (text) => hljs.highlightAuto(text).value
+            },
+            toolbar: [
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'image', 'code-block'],
+                ['clean']
+            ]
+        },
+        placeholder: 'Write your article content here...'
+    });
+    
+    // Thumbnail preview functionality
+    const thumbnailInput = document.getElementById('thumbnail');
+    const thumbnailUrlInput = document.getElementById('thumbnail_url');
+    const thumbnailPreview = document.getElementById('thumbnail-preview');
+    const thumbnailPreviewImg = document.getElementById('thumbnail-preview-img');
+    
+    // Show preview when file is selected
+    thumbnailInput.addEventListener('change', async (e) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            thumbnailPreviewImg.src = URL.createObjectURL(file);
+            thumbnailPreview.classList.remove('hidden');
+            thumbnailUrlInput.value = ''; // Clear URL input when file is selected
+        }
+    });
+    
+    // Show preview when URL is entered
+    thumbnailUrlInput.addEventListener('input', (e) => {
+        if (e.target.value) {
+            thumbnailPreviewImg.src = e.target.value;
+            thumbnailPreview.classList.remove('hidden');
+            thumbnailInput.value = ''; // Clear file input when URL is entered
+        } else {
+            thumbnailPreview.classList.add('hidden');
+        }
+    });
+    
+    // Handle form submission
+    document.getElementById('create-article-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Get content from Quill editor
+        const content = quill.root.innerHTML;
+        document.getElementById('content').value = content;
+        
+        const title = document.getElementById('title').value;
+        const summary = document.getElementById('summary').value;
+        let thumbnailUrl = document.getElementById('thumbnail_url').value;
+        
+        if (!title || !content) {
+            alert('Title and content are required!');
+            return;
+        }
+        
+        try {
+            // Upload thumbnail if file is selected
+            if (thumbnailInput.files && thumbnailInput.files[0]) {
+                const formData = new FormData();
+                formData.append('image', thumbnailInput.files[0]);
+                
+                const uploadResponse = await fetch('/api/articles/upload-image', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                if (!uploadResponse.ok) {
+                    const errorData = await uploadResponse.json();
+                    throw new Error(errorData.message || 'Failed to upload thumbnail');
+                }
+                
+                const uploadData = await uploadResponse.json();
+                thumbnailUrl = uploadData.url;
+            }
+            
+            // Create article with thumbnail URL
+            const response = await fetch('/api/articles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    title: title,
+                    summary: summary,
+                    content: content,
+                    thumbnail_url: thumbnailUrl
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create article');
+            }
+
+            const data = await response.json();
+            alert('Article published successfully!');
+            window.location.href = '/articles';
+        } catch (error) {
+            console.error('Error:', error);
+            alert(error.message || 'Failed to publish article. Please try again.');
+        }
+    });
+});
+</script>
+{% endblock %}

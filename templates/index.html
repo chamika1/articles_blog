@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Tech Blog{% endblock %}
+
+{% block content %}
+<div class="min-h-screen -mt-16">
+    <div class="max-w-6xl mx-auto px-4 py-16">
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-12">
+            <div class="lg:w-1/2 space-y-8">
+                <h1 class="text-5xl lg:text-6xl font-bold text-blue-400 leading-tight">
+                    Explore the Future of Technology
+                </h1>
+                <p class="text-xl text-gray-300">
+                    Join our community of tech enthusiasts and discover the latest innovations, insights, and developments in the world of technology.
+                </p>
+                <div class="flex gap-4">
+                    <a href="/articles" class="px-8 py-4 glass-effect rounded-lg text-blue-400 hover:text-blue-300 transition-all hover:shadow-lg hover:shadow-blue-500/20">
+                        Explore Articles
+                    </a>
+                    <a href="/register" class="px-8 py-4 bg-blue-500 rounded-lg text-white hover:bg-blue-600 transition-all">
+                        Join Now
+                    </a>
+                </div>
+            </div>
+            <div class="lg:w-1/2 relative">
+                <img src="https://image.pollinations.ai/prompt/futuristic_tech_blog_hero_3d?width=600&height=600&nologo=true" 
+                     alt="Tech Blog Hero" 
+                     class="rounded-xl glass-effect p-2">
+                <div class="absolute -bottom-4 -right-4 w-24 h-24 bg-blue-500 rounded-full opacity-20 blur-xl"></div>
+                <div class="absolute -top-4 -left-4 w-32 h-32 bg-purple-500 rounded-full opacity-20 blur-xl"></div>
+            </div>
+        </div>
+
+        <div class="mt-24 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="glass-effect p-6 rounded-xl space-y-4">
+                <img src="https://image.pollinations.ai/prompt/tech_innovation_icon?width=100&height=100&nologo=true" 
+                     alt="Innovation" 
+                     class="w-16 h-16 rounded-lg">
+                <h3 class="text-xl font-bold text-blue-400">Latest Innovation</h3>
+                <p class="text-gray-400">Stay updated with cutting-edge technology and breakthrough innovations.</p>
+            </div>
+            <div class="glass-effect p-6 rounded-xl space-y-4">
+                <img src="https://image.pollinations.ai/prompt/community_network_icon?width=100&height=100&nologo=true" 
+                     alt="Community" 
+                     class="w-16 h-16 rounded-lg">
+                <h3 class="text-xl font-bold text-blue-400">Active Community</h3>
+                <p class="text-gray-400">Connect with like-minded tech enthusiasts and share your knowledge.</p>
+            </div>
+            <div class="glass-effect p-6 rounded-xl space-y-4">
+                <img src="https://image.pollinations.ai/prompt/expert_insights_icon?width=100&height=100&nologo=true" 
+                     alt="Insights" 
+                     class="w-16 h-16 rounded-lg">
+                <h3 class="text-xl font-bold text-blue-400">Expert Insights</h3>
+                <p class="text-gray-400">Learn from industry experts and their valuable experiences.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

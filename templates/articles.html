@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Articles - Tech Blog{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-400">Articles</h1>
+        <button id="newArticleBtn" onclick="window.location.href='/articles/new'" class="glass-effect px-6 py-3 rounded-lg text-blue-400 hover:text-blue-300 transition-all">
+            New Article
+        </button>
+    </div>
+
+    <div id="articles-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Articles will be loaded dynamically -->
+        <div class="text-center py-12 col-span-full">
+            <p class="text-gray-400">Loading articles...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    const newArticleBtn = document.getElementById('newArticleBtn');
+    
+    // Show/hide new article button based on auth status
+    if (!token) {
+        newArticleBtn.style.display = 'none';
+    }
+
+    // Load articles
+    try {
+        // Use relative URL instead of absolute
+        const response = await fetch(window.location.origin + '/api/articles');
+        const data = await response.json();
+        const articles = data.articles;
+        
+        console.log('Articles response:', data); // Add debugging
+        
+        const container = document.getElementById('articles-container');
+        
+        if (articles && articles.length > 0) {
+            container.innerHTML = ''; // Clear loading message
+            articles.forEach(article => {
+                // Create article card with link to detail page
+                const card = document.createElement('div');
+                card.className = 'glass-effect p-6 rounded-xl hover:shadow-lg transition-all';
+                
+                // Format date
+                let dateDisplay = 'Date unavailable';
+                if (article.created_at) {
+                    try {
+                        const dateStr = typeof article.created_at === 'string' 
+                            ? article.created_at 
+                            : article.created_at.$date || article.created_at;
+                        const date = new Date(dateStr);
+                        if (!isNaN(date.getTime())) {
+                            dateDisplay = date.toLocaleDateString();
+                        }
+                    } catch (e) {
+                        console.error("Date parsing error:", e);
+                    }
+                }
+                
+                // Create thumbnail element if available
+                let thumbnailHtml = '';
+                if (article.thumbnail_url) {
+                    thumbnailHtml = `
+                        <div class="mb-4">
+                            <img src="${article.thumbnail_url}" alt="${article.title}" class="w-full h-48 object-cover rounded-lg">
+                        </div>
+                    `;
+                }
+                
+                // Make sure we're using the string ID for the article link
+                const articleId = typeof article._id === 'string' 
+                    ? article._id 
+                    : (article._id.$oid || article._id);
+                
+                card.innerHTML = `
+                    ${thumbnailHtml}
+                    <h2 class="text-xl font-bold text-blue-400 mb-2">${article.title}</h2>
+                    <p class="text-gray-400 text-sm mb-2">By ${article.author_name || 'Anonymous'} • ${dateDisplay}</p>
+                    <p class="text-gray-300 mb-4">${article.summary || article.content.substring(0, 100).replace(/<[^>]*>/g, '')}...</p>
+                    <a href="/articles/${articleId}" class="text-blue-400 hover:text-blue-300 transition-all">Read more →</a>
+                `;
+                
+                container.appendChild(card);
+            });
+        } else {
+            container.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <p class="text-gray-400">No articles found. Be the first to create one!</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading articles:', error);
+        document.getElementById('articles-container').innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <p class="text-red-400">Error loading articles: ${error.message}</p>
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}
