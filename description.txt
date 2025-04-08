@@ -1,0 +1,4 @@
+
+This README.md provides a comprehensive overview of your Tech Blog project, including setup instructions, features, and usage guidelines. It also includes information about the tech stack, API endpoints, and how to access the application on mobile devices using ngrok.
+
+You can place this file in the root directory of your project, and it will be displayed on your GitHub repository page.
